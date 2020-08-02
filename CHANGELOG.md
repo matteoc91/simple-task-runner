@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
 ## [Unreleased]
+### Added
+- Added command line argument validation
+
+### Changed
+- Changed **taskmanager.Create** return arguments, provided only error.
 
 ## [0.0.1] 2020-07-26
 ### Added
