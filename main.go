@@ -19,18 +19,32 @@ func main() {
 	flag.StringVar(&(simpletask).Title, "t", "", "The title of the task")
 	flag.StringVar(&(simpletask).Description, "d", "", "the description of the task")
 	deadline := flag.String("dl", "", "The deadline of the task, accepted format: yyyy-MM-dd")
+	operation := flag.String("o", "read", "The operation to be performed, available: create, read, update, delete")
 	flag.Parse()
 
+	// Get reference to simpletask
+	simpletaskReference := &simpletask
+
 	// Validate command line options
-	err := taskmanager.Validate(&simpletask, *deadline)
+	err := taskmanager.Validate(simpletaskReference, *deadline)
 
 	// Evaluate errors
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Store task
-	err = taskmanager.Create(&simpletask, *bucket)
+	// Evaluate CRUD operation
+	if taskmanager.IsCreate(*operation) { // Create task
+		err = taskmanager.Create(simpletaskReference, *bucket)
+	} else if taskmanager.IsRead(*operation) { // Read task
+		simpletaskReference, err = taskmanager.Read(simpletask.Name, *bucket)
+	} else if taskmanager.IsUpdate(*operation) { // Update task
+		log.Println("To be implemented")
+	} else if taskmanager.IsDelete(*operation) { // Delete task
+		log.Println("To be implemented")
+	} else { // Operation unknown
+		log.Fatal("operation: unknown")
+	}
 
 	// Print error
 	if err != nil {
@@ -38,5 +52,5 @@ func main() {
 	}
 
 	// Print simple task
-	log.Println(simpletask)
+	log.Println(*simpletaskReference)
 }
