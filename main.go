@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 
@@ -11,22 +12,19 @@ import (
 func main() {
 
 	// Create task
-	var simpletask simpletask.Task
+	var requestedTask simpletask.Task
 
 	// Read command line arguments
 	bucket := flag.String("b", "default", "The bucket in which the task will be created")
-	flag.StringVar(&(simpletask).Name, "n", "", "The name of the task, no white space should be set")
-	flag.StringVar(&(simpletask).Title, "t", "", "The title of the task")
-	flag.StringVar(&(simpletask).Description, "d", "", "the description of the task")
+	flag.StringVar(&(requestedTask).Name, "n", "", "The name of the task, no white space should be set")
+	flag.StringVar(&(requestedTask).Title, "t", "", "The title of the task")
+	flag.StringVar(&(requestedTask).Description, "d", "", "the description of the task")
 	deadline := flag.String("dl", "", "The deadline of the task, accepted format: yyyy-MM-dd")
 	operation := flag.String("o", "read", "The operation to be performed, available: create, read, update, delete")
 	flag.Parse()
 
-	// Get reference to simpletask
-	simpletaskReference := &simpletask
-
 	// Validate command line options
-	err := taskmanager.Validate(simpletaskReference, *deadline)
+	err := taskmanager.Validate(&requestedTask, *deadline)
 
 	// Evaluate errors
 	if err != nil {
@@ -35,22 +33,43 @@ func main() {
 
 	// Evaluate CRUD operation
 	if taskmanager.IsCreate(*operation) { // Create task
-		err = taskmanager.Create(simpletaskReference, *bucket)
+
+		// Create
+		err = taskmanager.Create(&requestedTask, *bucket)
+		// Print the created task
+		log.Println("### Created task:")
+		log.Println(requestedTask)
+
 	} else if taskmanager.IsRead(*operation) { // Read task
-		simpletaskReference, err = taskmanager.Read(simpletask.Name, *bucket)
+
+		// Create a task slice
+		var readedTasks []simpletask.Task
+		// Read task(s)
+		readedTasks, err = taskmanager.Read(requestedTask.Name, *bucket)
+		if err == nil {
+			// Print task(s)
+			log.Println("### Readed task(s):")
+			for _, v := range readedTasks {
+				log.Println(v)
+			}
+		}
+
 	} else if taskmanager.IsUpdate(*operation) { // Update task
+
 		log.Println("To be implemented")
+
 	} else if taskmanager.IsDelete(*operation) { // Delete task
+
 		log.Println("To be implemented")
+
 	} else { // Operation unknown
-		log.Fatal("operation: unknown")
+
+		err = errors.New("operation: unknown")
+
 	}
 
 	// Print error
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Print simple task
-	log.Println(*simpletaskReference)
 }

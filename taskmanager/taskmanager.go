@@ -24,14 +24,13 @@ func Validate(simpleTask *simpletask.Task, deadline string) error {
 	 */
 
 	// Mandatory
-	if simpleTask.Name == "" {
-		return errors.New("name: should not be empty")
-	}
+	if simpleTask.Name != "" {
 
-	// No whitespaces
-	re := regexp.MustCompile(`(\s){1}`)
-	if re.MatchString(simpleTask.Name) {
-		return errors.New("name: whitespaces not allowed")
+		// No whitespaces
+		re := regexp.MustCompile(`(\s){1}`)
+		if re.MatchString(simpleTask.Name) {
+			return errors.New("name: whitespaces not allowed")
+		}
 	}
 
 	/*
@@ -52,6 +51,11 @@ func Validate(simpleTask *simpletask.Task, deadline string) error {
 
 // Create creates a simple task if not present
 func Create(task *simpletask.Task, bucket string) error {
+
+	// Name should not be empty
+	if task.Name == "" {
+		return errors.New("name: should not be empty")
+	}
 
 	// Open DB
 	db, err := bolt.Open(dbname, 0600, nil)
@@ -81,7 +85,7 @@ func Create(task *simpletask.Task, bucket string) error {
 }
 
 // Read reads from bucket the given task
-func Read(name string, bucket string) (*simpletask.Task, error) {
+func Read(name string, bucket string) ([]simpletask.Task, error) {
 
 	// Open DB
 	db, err := bolt.Open(dbname, 0600, nil)
@@ -94,24 +98,45 @@ func Read(name string, bucket string) (*simpletask.Task, error) {
 		return nil, err
 	}
 
+	// Define variables
+	var simpleTasks []simpletask.Task
+	var simpleTask simpletask.Task
+
 	// Read from bucket
-	var simpletask simpletask.Task
 	err = db.View(func(tx *bolt.Tx) error {
+
+		// Get the bucket
 		b := tx.Bucket([]byte(bucket))
 		if err != nil {
 			return fmt.Errorf("Read bucket: %s", err)
 		}
-		v := b.Get([]byte(name))
-		json.Unmarshal(v, &simpletask)
+
+		if name != "" {
+
+			// A name has been supplied, look for it
+			v := b.Get([]byte(name))
+
+			// No task found
+			if v == nil {
+				return errors.New("No task found")
+			}
+
+			// No error to be raised
+			json.Unmarshal(v, &simpleTask)
+			simpleTasks = append(simpleTasks, simpleTask)
+			return nil
+		}
+
+		// No name has been supplied, look for each task
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			json.Unmarshal(v, &simpleTask)
+			simpleTasks = append(simpleTasks, simpleTask)
+		}
 		return nil
 	})
 
-	// No task found
-	if simpletask.Name == "" {
-		return nil, errors.New("No task found")
-	}
-
-	return &simpletask, err
+	return simpleTasks, err
 }
 
 // IsCreate check if operation is create
