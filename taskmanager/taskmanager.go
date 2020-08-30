@@ -14,7 +14,7 @@ import (
 
 const dbname string = "simple-task-runner-workarea.db"
 
-// Validate the command line arguments
+// Validate validates the command line arguments
 func Validate(simpleTask *simpletask.Task, deadline string) error {
 
 	/*
@@ -156,7 +156,7 @@ func IsUpdate(operation string) bool {
 
 // IsDelete check if operation is delete
 func IsDelete(operation string) bool {
-	return isRequestedOperation(operation, "read")
+	return isRequestedOperation(operation, "delete")
 }
 
 // isRequestedOperation check if operation is requested operation

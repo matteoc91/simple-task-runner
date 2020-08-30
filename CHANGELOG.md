@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
 ## [Unreleased]
+### Fixed
+- Fixed **taskmanager/taskmanager.IsDelete** function
+
+### Added
+- Added unit testing
 
 ## [0.0.1] 2020-08-16
 ### Added
