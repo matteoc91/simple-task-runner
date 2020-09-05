@@ -69,7 +69,7 @@ func Create(task *simpletask.Task, bucket string) error {
 	}
 
 	// Create into bucket
-	err = db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
 		if err != nil {
 			return fmt.Errorf("Create bucket: %s", err)
@@ -79,9 +79,6 @@ func Create(task *simpletask.Task, bucket string) error {
 		b.Put([]byte(task.Name), v)
 		return nil
 	})
-
-	// Return data
-	return err
 }
 
 // Read reads from bucket the given task
@@ -137,6 +134,39 @@ func Read(name string, bucket string) ([]simpletask.Task, error) {
 	})
 
 	return simpleTasks, err
+}
+
+// Delete deletes a task by its name
+func Delete(name string, bucket string) error {
+
+	// Name should not be empty
+	if name == "" {
+		return errors.New("name: should not be empty")
+	}
+
+	// Open DB
+	db, err := bolt.Open(dbname, 0600, nil)
+
+	// Defer close
+	defer db.Close()
+
+	// Return error
+	if err != nil {
+		return err
+	}
+
+	// Try to read bucket and delete record
+	return db.Update(func(tx *bolt.Tx) error {
+
+		// Get the bucket
+		b := tx.Bucket([]byte(bucket))
+		if err != nil {
+			return fmt.Errorf("Read bucket: %s", err)
+		}
+
+		// Try to delete
+		return b.Delete([]byte(name))
+	})
 }
 
 // IsCreate check if operation is create

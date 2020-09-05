@@ -60,7 +60,7 @@ func main() {
 
 	} else if taskmanager.IsDelete(*operation) { // Delete task
 
-		log.Println("To be implemented")
+		err = taskmanager.Delete(requestedTask.Name, *bucket)
 
 	} else { // Operation unknown
 

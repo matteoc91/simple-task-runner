@@ -45,7 +45,7 @@ func TestValidate(t *testing.T) {
 }
 
 // TestCreates creates a task
-func TestCreateTrue(t *testing.T) {
+func TestCreate(t *testing.T) {
 
 	// Create a task
 	var task simpletask.Task
@@ -123,6 +123,39 @@ func TestRead(t *testing.T) {
 	tasks, readError = Read("____TestTask", "default")
 	if readError == nil {
 		t.Errorf("Read ok, expects 'no task found'")
+	}
+}
+
+// TestDelete delets a task
+func TestDelete(t *testing.T) {
+
+	// Create a task
+	var task simpletask.Task
+	task.Name = "TestTask"
+	task.Description = "Test Task"
+
+	// Validate the task
+	err := Validate(&task, "")
+	if err != nil {
+		t.Errorf("Delete %v, expects ok", err.Error())
+	}
+
+	// Create the task
+	err = Create(&task, "default")
+	if err != nil {
+		t.Errorf("Delete %v, expects ok", err.Error())
+	}
+
+	// Try to delete
+	err = Delete(task.Name, "default")
+	if err != nil {
+		t.Errorf("Delete %v, expects ok", err.Error())
+	}
+
+	// Delete with error
+	err = Delete("", "default")
+	if err == nil {
+		t.Errorf("Delete ok, expects ko")
 	}
 }
 
