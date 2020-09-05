@@ -2,6 +2,7 @@ package taskmanager
 
 import (
 	"testing"
+	"time"
 
 	"github.com/matteoc91/simple-task-runner/simpletask"
 )
@@ -156,6 +157,62 @@ func TestDelete(t *testing.T) {
 	err = Delete("", "default")
 	if err == nil {
 		t.Errorf("Delete ok, expects ko")
+	}
+}
+
+// TestUpdate updates a task
+func TestUpdate(t *testing.T) {
+
+	// Create a task
+	var task simpletask.Task
+	task.Name = "TestTask"
+	task.Description = "Test Task"
+
+	// Validate the task
+	err := Validate(&task, "")
+	if err != nil {
+		t.Errorf("Update %v, expects ok", err.Error())
+	}
+
+	// Create the task
+	err = Create(&task, "default")
+	if err != nil {
+		t.Errorf("Update %v, expects ok", err.Error())
+	}
+
+	// Update task
+	task.Title = "New Title"
+	task.Description = "New Description"
+	task.Deadline = time.Now()
+	var updatedTask *simpletask.Task
+	updatedTask, err = Update(&task, "default")
+	if err != nil {
+		t.Errorf("Update %v, expects ok", err.Error())
+	}
+	if updatedTask.Title != task.Title {
+		t.Errorf("Update Title not updated, expects to match")
+	}
+	if updatedTask.Description != task.Description {
+		t.Errorf("Update Description not updated, expects to match")
+	}
+	if updatedTask.Deadline != task.Deadline {
+		t.Errorf("Update Deadline not updated, expects to match")
+	}
+
+	// Create a task without name
+	var taskWithoutName simpletask.Task
+	taskWithoutName.Description = "Test Task"
+
+	// Validate the task
+	err = Validate(&taskWithoutName, "")
+	if err != nil {
+		t.Errorf("Update %v, expects ok", err.Error())
+	}
+
+	// Attempt to update the task
+	_, err = Update(&taskWithoutName, "default")
+	if err == nil {
+		t.Errorf("Update ok, expects error 'name should not be empty'")
 	}
 }
 

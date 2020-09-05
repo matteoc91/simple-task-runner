@@ -75,6 +75,7 @@ func Create(task *simpletask.Task, bucket string) error {
 			return fmt.Errorf("Create bucket: %s", err)
 		}
 		task.Created = time.Now()
+		task.Updated = time.Now()
 		v, _ := json.Marshal(&task)
 		b.Put([]byte(task.Name), v)
 		return nil
@@ -167,6 +168,70 @@ func Delete(name string, bucket string) error {
 		// Try to delete
 		return b.Delete([]byte(name))
 	})
+}
+
+// Update updates a task
+func Update(task *simpletask.Task, bucket string) (*simpletask.Task, error) {
+
+	// Name should not be empty
+	if task.Name == "" {
+		return nil, errors.New("name: should not be empty")
+	}
+
+	// Open DB
+	db, err := bolt.Open(dbname, 0600, nil)
+
+	// Defer close
+	defer db.Close()
+
+	// Return error
+	if err != nil {
+		return nil, err
+	}
+
+	// Define task
+	var simpleTask simpletask.Task
+
+	// Try to update
+	err = db.Update(func(tx *bolt.Tx) error {
+
+		// Get the bucket
+		b := tx.Bucket([]byte(bucket))
+		if err != nil {
+			return fmt.Errorf("Read bucket: %s", err)
+		}
+
+		// Get task
+		v := b.Get([]byte(task.Name))
+		if v == nil {
+			return fmt.Errorf("No task found")
+		}
+		json.Unmarshal(v, &simpleTask)
+
+		// Update title
+		if task.Title != "" {
+			simpleTask.Title = task.Title
+		}
+
+		// Update description
+		if task.Description != "" {
+			simpleTask.Description = task.Description
+		}
+
+		// Update deadline
+		if !task.Deadline.IsZero() {
+			simpleTask.Deadline = task.Deadline
+		}
+
+		// Update updated
+		simpleTask.Updated = time.Now()
+
+		// Try to update
+		v, _ = json.Marshal(&simpleTask)
+		return b.Put([]byte(simpleTask.Name), v)
+	})
+
+	return &simpleTask, err
 }
 
 // IsCreate check if operation is create

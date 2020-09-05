@@ -56,7 +56,15 @@ func main() {
 
 	} else if taskmanager.IsUpdate(*operation) { // Update task
 
-		log.Println("To be implemented")
+		// Update
+		var updatedTask *simpletask.Task
+		updatedTask, err = taskmanager.Update(&requestedTask, *bucket)
+
+		// Print the updated task
+		if err == nil {
+			log.Println("### Updated task:")
+			log.Println(*updatedTask)
+		}
 
 	} else if taskmanager.IsDelete(*operation) { // Delete task
 

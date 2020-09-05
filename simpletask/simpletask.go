@@ -9,6 +9,7 @@ type Task struct {
 	Title       string
 	Description string
 	Created     time.Time
+	Updated     time.Time
 	Deadline    time.Time
 	Comments    []Comment
 }
