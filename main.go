@@ -19,9 +19,13 @@ func main() {
 	flag.StringVar(&(requestedTask).Name, "n", "", "The name of the task, no white space should be set")
 	flag.StringVar(&(requestedTask).Title, "t", "", "The title of the task")
 	flag.StringVar(&(requestedTask).Description, "d", "", "the description of the task")
+	comment := flag.String("c", "", "A comment for the task")
 	deadline := flag.String("dl", "", "The deadline of the task, accepted format: yyyy-MM-dd")
 	operation := flag.String("o", "read", "The operation to be performed, available: create, read, update, delete")
 	flag.Parse()
+
+	// Add comment
+	requestedTask.Comments = taskmanager.AddComment(requestedTask.Comments, *comment)
 
 	// Validate command line options
 	err := taskmanager.Validate(&requestedTask, *deadline)

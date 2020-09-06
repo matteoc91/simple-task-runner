@@ -184,6 +184,7 @@ func TestUpdate(t *testing.T) {
 	task.Title = "New Title"
 	task.Description = "New Description"
 	task.Deadline = time.Now()
+	task.Comments = AddComment(task.Comments, "A comment")
 	var updatedTask *simpletask.Task
 	updatedTask, err = Update(&task, "default")
 	if err != nil {
@@ -197,6 +198,9 @@ func TestUpdate(t *testing.T) {
 	}
 	if updatedTask.Deadline != task.Deadline {
 		t.Errorf("Update Deadline not updated, expects to match")
+	}
+	if len(updatedTask.Comments) == 0 {
+		t.Errorf("Update len(Comments) = 0, expects 1")
 	}
 
 	// Create a task without name

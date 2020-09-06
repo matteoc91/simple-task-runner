@@ -18,6 +18,17 @@ const dbname string = "simple-task-runner-workarea.db"
 // txOperation: transactional operation
 type txOperation func(b *bolt.Bucket) error
 
+// AddComment adds a comment to the list
+func AddComment(comments []simpletask.Comment, commentText string) []simpletask.Comment {
+	if commentText != "" {
+		var comment simpletask.Comment
+		comment.Text = commentText
+		comment.Created = time.Now()
+		comments = append([]simpletask.Comment{comment}, comments...)
+	}
+	return comments
+}
+
 // Validate validates the command line arguments
 func Validate(simpleTask *simpletask.Task, deadline string) error {
 
@@ -156,6 +167,11 @@ func Update(task *simpletask.Task, bucket string) (*simpletask.Task, error) {
 		// Update deadline
 		if !task.Deadline.IsZero() {
 			simpleTask.Deadline = task.Deadline
+		}
+
+		// Add a comment
+		if len(task.Comments) > 0 {
+			simpleTask.Comments = AddComment(simpleTask.Comments, task.Comments[0].Text)
 		}
 
 		// Update updated
