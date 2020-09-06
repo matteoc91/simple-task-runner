@@ -12,18 +12,16 @@ import (
 	"github.com/matteoc91/simple-task-runner/simpletask"
 )
 
+// dbname: database name
 const dbname string = "simple-task-runner-workarea.db"
+
+// txOperation: transactional operation
+type txOperation func(b *bolt.Bucket) error
 
 // Validate validates the command line arguments
 func Validate(simpleTask *simpletask.Task, deadline string) error {
 
-	/*
-	***************************
-	****** Validate name ******
-	***************************
-	 */
-
-	// Mandatory
+	// Validate name
 	if simpleTask.Name != "" {
 
 		// No whitespaces
@@ -33,12 +31,7 @@ func Validate(simpleTask *simpletask.Task, deadline string) error {
 		}
 	}
 
-	/*
-	***************************
-	**** Validate deadline ****
-	***************************
-	 */
-
+	// Validate deadline
 	var err error
 	if deadline != "" {
 		var dl time.Time
@@ -57,58 +50,30 @@ func Create(task *simpletask.Task, bucket string) error {
 		return errors.New("name: should not be empty")
 	}
 
-	// Open DB
-	db, err := bolt.Open(dbname, 0600, nil)
-
-	// Defer close
-	defer db.Close()
-
-	// Return error
-	if err != nil {
-		return err
-	}
-
-	// Create into bucket
-	return db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
-		if err != nil {
-			return fmt.Errorf("Create bucket: %s", err)
-		}
+	// Define create operation
+	var create txOperation = func(b *bolt.Bucket) error {
 		task.Created = time.Now()
 		task.Updated = time.Now()
 		v, _ := json.Marshal(&task)
 		b.Put([]byte(task.Name), v)
 		return nil
-	})
+	}
+
+	// Open in write mode
+	return openInWriteMode(create, bucket)
 }
 
 // Read reads from bucket the given task
 func Read(name string, bucket string) ([]simpletask.Task, error) {
 
-	// Open DB
-	db, err := bolt.Open(dbname, 0600, nil)
-
-	// Defer close
-	defer db.Close()
-
-	// Return error
-	if err != nil {
-		return nil, err
-	}
-
 	// Define variables
 	var simpleTasks []simpletask.Task
 	var simpleTask simpletask.Task
 
-	// Read from bucket
-	err = db.View(func(tx *bolt.Tx) error {
+	// Define read operation
+	var read txOperation = func(b *bolt.Bucket) error {
 
-		// Get the bucket
-		b := tx.Bucket([]byte(bucket))
-		if err != nil {
-			return fmt.Errorf("Read bucket: %s", err)
-		}
-
+		// If name is supplied, check for single task
 		if name != "" {
 
 			// A name has been supplied, look for it
@@ -132,7 +97,10 @@ func Read(name string, bucket string) ([]simpletask.Task, error) {
 			simpleTasks = append(simpleTasks, simpleTask)
 		}
 		return nil
-	})
+	}
+
+	// Open in read mode
+	err := openInReadMode(read, bucket)
 
 	return simpleTasks, err
 }
@@ -145,29 +113,13 @@ func Delete(name string, bucket string) error {
 		return errors.New("name: should not be empty")
 	}
 
-	// Open DB
-	db, err := bolt.Open(dbname, 0600, nil)
-
-	// Defer close
-	defer db.Close()
-
-	// Return error
-	if err != nil {
-		return err
+	// Define delete operation
+	var delete txOperation = func(b *bolt.Bucket) error {
+		return b.Delete([]byte(name))
 	}
 
-	// Try to read bucket and delete record
-	return db.Update(func(tx *bolt.Tx) error {
-
-		// Get the bucket
-		b := tx.Bucket([]byte(bucket))
-		if err != nil {
-			return fmt.Errorf("Read bucket: %s", err)
-		}
-
-		// Try to delete
-		return b.Delete([]byte(name))
-	})
+	// Open in write mode
+	return openInWriteMode(delete, bucket)
 }
 
 // Update updates a task
@@ -178,28 +130,11 @@ func Update(task *simpletask.Task, bucket string) (*simpletask.Task, error) {
 		return nil, errors.New("name: should not be empty")
 	}
 
-	// Open DB
-	db, err := bolt.Open(dbname, 0600, nil)
-
-	// Defer close
-	defer db.Close()
-
-	// Return error
-	if err != nil {
-		return nil, err
-	}
-
 	// Define task
 	var simpleTask simpletask.Task
 
-	// Try to update
-	err = db.Update(func(tx *bolt.Tx) error {
-
-		// Get the bucket
-		b := tx.Bucket([]byte(bucket))
-		if err != nil {
-			return fmt.Errorf("Read bucket: %s", err)
-		}
+	// Define update operation
+	var update txOperation = func(b *bolt.Bucket) error {
 
 		// Get task
 		v := b.Get([]byte(task.Name))
@@ -229,7 +164,10 @@ func Update(task *simpletask.Task, bucket string) (*simpletask.Task, error) {
 		// Try to update
 		v, _ = json.Marshal(&simpleTask)
 		return b.Put([]byte(simpleTask.Name), v)
-	})
+	}
+
+	// Open in write mode
+	err := openInWriteMode(update, bucket)
 
 	return &simpleTask, err
 }
@@ -252,6 +190,62 @@ func IsUpdate(operation string) bool {
 // IsDelete check if operation is delete
 func IsDelete(operation string) bool {
 	return isRequestedOperation(operation, "delete")
+}
+
+// openInWriteMode opens the connection in write mode
+func openInWriteMode(txOp txOperation, bucket string) error {
+
+	// Open DB
+	db, err := bolt.Open(dbname, 0600, nil)
+
+	// Defer close
+	defer db.Close()
+
+	// Return error
+	if err != nil {
+		return err
+	}
+
+	// Update operation
+	return db.Update(func(tx *bolt.Tx) error {
+
+		// Create bucket if not exist
+		b, err := tx.CreateBucketIfNotExists([]byte(bucket))
+		if err != nil {
+			return fmt.Errorf("Create bucket: %s", err)
+		}
+
+		// Perform txOp
+		return txOp(b)
+	})
+}
+
+// openInReadMode opens the connection in read mode
+func openInReadMode(txOp txOperation, bucket string) error {
+
+	// Open DB
+	db, err := bolt.Open(dbname, 0600, nil)
+
+	// Defer close
+	defer db.Close()
+
+	// Return error
+	if err != nil {
+		return err
+	}
+
+	// Read from bucket
+	return db.View(func(tx *bolt.Tx) error {
+
+		// Get the bucket
+		b := tx.Bucket([]byte(bucket))
+		if err != nil {
+			return fmt.Errorf("Read bucket: %s", err)
+		}
+
+		// Perform txOp
+		return txOp(b)
+	})
 }
 
 // isRequestedOperation check if operation is requested operation
